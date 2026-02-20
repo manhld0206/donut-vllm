@@ -13,10 +13,10 @@ model = VisionEncoderDecoderModel.from_pretrained(
     "naver-clova-ix/donut-base-finetuned-cord-v2", dtype="float16"
 )
 
-device = "cuda"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 model.to(device)  # doctest: +IGNORE_RESULT
-# model.encoder.compile()
-# model.decoder.compile()
+model.encoder.compile()
+model.decoder.compile()
 
 # # load document image
 # dataset = load_dataset("hf-internal-testing/example-documents", split="test")
@@ -52,8 +52,7 @@ for _ in range(10):
     )
     print("Time to generate:", time.perf_counter() - start_time)
 
-
-print(outputs.sequences)
+token_ids = outputs.sequences[0]
 sequence = processor.batch_decode(outputs.sequences)[0]
 sequence = sequence.replace(processor.tokenizer.eos_token, "").replace(
     processor.tokenizer.pad_token, ""
@@ -61,4 +60,13 @@ sequence = sequence.replace(processor.tokenizer.eos_token, "").replace(
 sequence = re.sub(
     r"<.*?>", "", sequence, count=1
 ).strip()  # remove first task start token
-print(processor.token2json(sequence))
+structured = processor.token2json(sequence)
+
+print("Token length", len(token_ids))
+print("=== Tokens ===")
+print(token_ids)
+
+print("=== Raw ===")
+print(sequence)
+print("=== JSON ===")
+print(structured)

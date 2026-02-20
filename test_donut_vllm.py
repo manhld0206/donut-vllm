@@ -21,25 +21,11 @@ def _load_image(path: Path) -> Image.Image:
     return image
 
 
-def _clean_prediction(text: str, task_prompt: str, tokenizer) -> str:
-    cleaned = text
-    if task_prompt and cleaned.startswith(task_prompt):
-        cleaned = cleaned[len(task_prompt) :]
-    if tokenizer.eos_token:
-        cleaned = cleaned.replace(tokenizer.eos_token, "")
-    if tokenizer.pad_token:
-        cleaned = cleaned.replace(tokenizer.pad_token, "")
-    cleaned = cleaned.strip()
-    if cleaned and cleaned[0] == "<":
-        cleaned = re.sub(r"^<[^>]+>", "", cleaned).strip()
-    return cleaned
-
-
 def main() -> None:
     from transformers import DonutProcessor
 
     parser = argparse.ArgumentParser(
-        description="Smoke test for Donut on vLLM (VisionEncoderDecoder)."
+        description="Test run for Donut on vLLM (VisionEncoderDecoder)."
     )
     parser.add_argument(
         "--model",
@@ -57,12 +43,6 @@ def main() -> None:
         help="Task prompt token for the model.",
     )
     parser.add_argument(
-        "--max-tokens",
-        type=int,
-        default=512,
-        help="Maximum tokens to generate.",
-    )
-    parser.add_argument(
         "--dtype",
         default="float16",
         choices=["auto", "float16", "bfloat16", "float32"],
@@ -75,12 +55,6 @@ def main() -> None:
         help="vLLM GPU memory utilization target.",
     )
     parser.add_argument(
-        "--max-model-len",
-        type=int,
-        default=2048,
-        help="Override max model length in vLLM.",
-    )
-    parser.add_argument(
         "--warmup",
         type=int,
         default=1,
@@ -89,7 +63,7 @@ def main() -> None:
     parser.add_argument(
         "--runs",
         type=int,
-        default=5,
+        default=10,
         help="Number of timed generations for the benchmark.",
     )
     args = parser.parse_args()
@@ -115,13 +89,12 @@ def main() -> None:
         .tolist()
     )
 
-    max_tokens = 128
     prep_time = time.perf_counter() - prep_start
 
     sampling_params = SamplingParams(
         temperature=0.0,
         top_p=1.0,
-        max_tokens=max_tokens,
+        max_tokens=128,
         # stop_token_ids=None,
         ignore_eos=True,
         # bad_words=None,
@@ -134,9 +107,9 @@ def main() -> None:
         limit_mm_per_prompt={"image": 1},
         # trust_remote_code=False,
         gpu_memory_utilization=args.gpu_memory_utilization,
-        # max_model_len=768,
-        # max_num_seqs=1,
-        # hf_overrides={"architectures": ["DonutForConditionalGeneration"]},
+        # Need this override becasue vllm engine will add bos token
+        # at the start of decoder prompt for encoder decoder models
+        # event though the model config set decoder_start_token_id to None
         hf_overrides={"decoder_start_token_id": prompt_token_ids[0]},
     )
     llm_init_time = time.perf_counter() - llm_init_start
@@ -146,35 +119,28 @@ def main() -> None:
         "multi_modal_data": {"image": image},
     }]
 
-    warmup_runs = max(args.warmup, 0)
+    print(f"Prep time (s) processor+image+prompt={prep_time:.4f}")
+    print(f"LLM init time (s)={llm_init_time:.4f}")
+
+    warmup_runs = max(args.warmup, 1)
     for _ in range(warmup_runs):
         llm.generate(prompts, sampling_params, use_tqdm=False)
 
-    timings: list[float] = []
-    for _ in range(max(args.runs, 1)):
+    for _ in range(args.runs):
         start_time = time.perf_counter()
         outputs = llm.generate(prompts, sampling_params, use_tqdm=False)
-        timings.append(time.perf_counter() - start_time)
-        output = outputs[0].outputs[0]
+        print("Time to generate:", time.perf_counter() - start_time)
 
-    print(f"Prep time (s) processor+image+prompt={prep_time:.4f}")
-    print(f"LLM init time (s)={llm_init_time:.4f}")
-    if timings:
-        avg = sum(timings) / len(timings)
-        p50 = sorted(timings)[len(timings) // 2]
-        print(f"Generate time (s) avg={avg:.4f} p50={p50:.4f} runs={len(timings)}")
 
-    # print(len(output))
+    output=outputs[0].outputs[0]
     token_ids = output.token_ids
+    print("Token length", len(token_ids))
+    print("=== Tokens ===")
     print(token_ids)
-    print(len(token_ids))
-    cleaned = _clean_prediction(output.text, args.task_prompt, processor.tokenizer)
-    structured = processor.token2json(cleaned)
+    structured = processor.token2json(output.text)
 
     print("=== Raw ===")
     print(output.text)
-    print("=== Cleaned ===")
-    print(cleaned)
     print("=== JSON ===")
     print(structured)
 
