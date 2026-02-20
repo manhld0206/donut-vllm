@@ -1,6 +1,8 @@
 # Overview
 - Implementation of Donut [model](https://huggingface.co/docs/transformers/en/model_doc/donut) in vLLM v1 engine
-- The donut vllm implementation can be found [here](donut_vllm_v1/donut.py)
+- Donut was originally supported in vLLM v0 engine but dropped in v1
+- There are still some multimodal encoder decoder in vLLM v1 now like [whisper](https://docs.vllm.ai/en/latest/api/vllm/model_executor/models/whisper/) or [nvidia nemotron parse](https://docs.vllm.ai/en/latest/api/vllm/model_executor/models/nemotron_parse/)
+- The donut vllm v1 engine implementation can be found in [donut_vllm_v1/donut.py](donut_vllm_v1/donut.py) and took inspiration from 2 above models
 
 # Benchmark
 - Set generation config to ignore eos to always generate until max length
