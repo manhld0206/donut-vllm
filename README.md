@@ -12,6 +12,8 @@
 
 ```bash
 uv run test_donut_original.py
+```
+```bash
 ...
 Time to generate: 0.2661869579997074
 Time to generate: 0.266351776999727
@@ -20,6 +22,9 @@ Time to generate: 0.27392077799959225
 ```
 
 ## [vLLM Donut](test_donut_vllm.py)
+```bash
+uv run test_donut_vllm.py
+```
 ```bash
 ...
 Time to generate: 0.13058361200000945
