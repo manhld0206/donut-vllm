@@ -1,22 +1,16 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright: Donut vLLM integration
-
-from __future__ import annotations
-from vllm.compilation.decorators import support_torch_compile
-from typing import Literal, Annotated, Optional, Union
-
 import math
 from collections.abc import Iterable, Mapping, Sequence
+from typing import Annotated, Literal, Optional, Union
 
 import torch
 from torch import nn
 from transformers import MBartConfig, VisionEncoderDecoderConfig
 from transformers.models.swin.modeling_swin import (
-    window_partition,
-    window_reverse,
     SwinConfig,
 )
-
+from vllm.compilation.decorators import support_torch_compile
 from vllm.config import CacheConfig, VllmConfig
 from vllm.config.multimodal import BaseDummyOptions
 from vllm.model_executor.layers.activation import get_act_fn
@@ -33,12 +27,9 @@ from vllm.model_executor.models.interfaces import (
     SupportsMultiModal,
 )
 from vllm.model_executor.models.swin import (
-    SwinEmbeddings,
-    SwinLayer as VllmSwinLayer,
     SwinModel,
-    SwinPatchMerging,
 )
-from vllm.model_executor.models.utils import maybe_prefix, flatten_bn, AutoWeightsLoader
+from vllm.model_executor.models.utils import AutoWeightsLoader, maybe_prefix
 from vllm.model_executor.models.whisper import WhisperAttention, WhisperCrossAttention
 from vllm.multimodal import MULTIMODAL_REGISTRY
 from vllm.multimodal.inputs import (
@@ -54,14 +45,7 @@ from vllm.multimodal.processing import (
     PromptReplacement,
     PromptUpdate,
 )
-from functools import lru_cache
-
 from vllm.utils.tensor_schema import TensorSchema, TensorShape
-from transformers import AutoTokenizer
-from transformers.models.donut.image_processing_donut_fast import (
-    DonutImageProcessorFast,
-)
-from transformers.models.donut.processing_donut import DonutProcessor
 from vllm.v1.attention.backend import AttentionType
 
 
@@ -161,15 +145,11 @@ class DonutMultiModalProcessor(EncDecMultiModalProcessor[DonutProcessingInfo]):
         tok_kwargs: Mapping[str, object],
     ):
         if mm_data:
-            processed_outputs = super()._call_hf_processor(
-                prompt, mm_data, mm_kwargs, tok_kwargs
-            )
+            processed_outputs = super()._call_hf_processor(prompt, mm_data, mm_kwargs, tok_kwargs)
         else:
             hf_processor = self.info.get_hf_processor()
             tokenizer = hf_processor.tokenizer
-            processed_outputs = tokenizer(
-                prompt, add_special_tokens=False, return_tensors="pt"
-            )
+            processed_outputs = tokenizer(prompt, add_special_tokens=False, return_tensors="pt")
         return processed_outputs
 
     def _get_mm_fields_config(
@@ -412,16 +392,13 @@ class DonutForConditionalGeneration(nn.Module, SupportsMultiModal):
         super().__init__()
         config = vllm_config.model_config.hf_config
         if not isinstance(config, VisionEncoderDecoderConfig):
-            raise TypeError(
-                "DonutForConditionalGeneration expects a VisionEncoderDecoderConfig."
-            )
+            raise TypeError("DonutForConditionalGeneration expects a VisionEncoderDecoderConfig.")
 
         encoder_type = getattr(config.encoder, "model_type", "")
         decoder_type = getattr(config.decoder, "model_type", "")
         if encoder_type not in ("donut-swin", "swin") or decoder_type != "mbart":
             raise ValueError(
-                "DonutForConditionalGeneration only supports "
-                "donut-swin encoder with mbart decoder."
+                "DonutForConditionalGeneration only supports donut-swin encoder with mbart decoder."
             )
 
         cache_config = vllm_config.cache_config
@@ -460,12 +437,6 @@ class DonutForConditionalGeneration(nn.Module, SupportsMultiModal):
         if modality.startswith("image"):
             return None
         raise ValueError("Only image modality is supported")
-
-    @classmethod
-    def get_generation_prompt(
-
-    ):
-        pass
 
     def _parse_and_validate_image_input(self, **kwargs: object):
         pixel_values: Optional[
@@ -544,7 +515,6 @@ class DonutForConditionalGeneration(nn.Module, SupportsMultiModal):
         sampling_metadata: object | None = None,
     ) -> torch.Tensor:
         return self.logits_processor(self.lm_head, hidden_states)
-
 
     def load_weights(self, weights: Iterable[tuple[str, torch.Tensor]]):
         loaded: set[str] = set()

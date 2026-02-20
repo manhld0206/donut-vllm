@@ -1,10 +1,11 @@
 import re
+import time
+
+import torch
+from PIL import Image
 
 # from datasets import load_dataset
 from transformers import DonutProcessor, VisionEncoderDecoderModel
-import torch
-import time
-from PIL import Image
 
 processor = DonutProcessor.from_pretrained(
     "naver-clova-ix/donut-base-finetuned-cord-v2", use_fast=True

@@ -1,10 +1,4 @@
-#!/usr/bin/env python3
-# SPDX-License-Identifier: Apache-2.0
-
-from __future__ import annotations
-
 import argparse
-import re
 import time
 from pathlib import Path
 
@@ -114,10 +108,12 @@ def main() -> None:
     )
     llm_init_time = time.perf_counter() - llm_init_start
 
-    prompts = [{
-        "prompt": "",
-        "multi_modal_data": {"image": image},
-    }]
+    prompts = [
+        {
+            "prompt": "",
+            "multi_modal_data": {"image": image},
+        }
+    ]
 
     print(f"Prep time (s) processor+image+prompt={prep_time:.4f}")
     print(f"LLM init time (s)={llm_init_time:.4f}")
@@ -131,8 +127,7 @@ def main() -> None:
         outputs = llm.generate(prompts, sampling_params, use_tqdm=False)
         print("Time to generate:", time.perf_counter() - start_time)
 
-
-    output=outputs[0].outputs[0]
+    output = outputs[0].outputs[0]
     token_ids = output.token_ids
     print("Token length", len(token_ids))
     print("=== Tokens ===")
