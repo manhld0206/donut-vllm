@@ -15,7 +15,7 @@ model = VisionEncoderDecoderModel.from_pretrained(
 )
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-model.to(device)  # doctest: +IGNORE_RESULT
+model.to(device)
 model.encoder.compile()
 model.decoder.compile()
 
