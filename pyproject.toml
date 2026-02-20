@@ -1,0 +1,20 @@
+[project]
+name = "donut_vllm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12, <3.13"
+dependencies = [
+    "datasets>=4.5.0",
+    "transformers>=5.0.0",
+    "vllm>=0.15.0",
+    "torch<2.10",
+]
+
+[project.entry-points."vllm.general_plugins"]
+donut = "donut_vllm.plugin:register"
+
+[tool.uv]
+override-dependencies = [
+    "transformers>=5.0.0"
+]

@@ -1,0 +1,1 @@
+"""Donut vLLM extension package."""
